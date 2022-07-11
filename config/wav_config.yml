@@ -1,0 +1,4 @@
+data_dir: '/VOLUME/sample/sample_AJ' # 원본데이터가 있는 폴더
+from_ajou: True # 아주대 형식인지 여부(파일명, sampling_rate)
+destination: '/VOLUME/sample/sample_AJ_csv' # 변환된 데이터가 저장될 폴더 (생성 안되어있으면 자동으로 폴더 만듬)
+format: 'csv'
