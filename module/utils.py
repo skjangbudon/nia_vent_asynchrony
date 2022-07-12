@@ -1,4 +1,5 @@
 import os
+import yaml
 import numpy as np
 import pandas as pd
 
@@ -9,6 +10,10 @@ def load_data(filename, label_file=False):
     print(filename, X.shape)
     return X
 
+def load_yaml(fname):
+    with open(fname, 'r') as fp:
+        data = yaml.safe_load(fp)
+    return data
 
 def load_and_stack_data(data_files: list, label_file=False):
     if isinstance(data_files, str):
