@@ -3,14 +3,16 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class VAE(nn.Module):
-    def __init__(self, input_dim=1):
+    def __init__(self, input_dim=2):
         super().__init__()
+        self.input_dim = input_dim
         self.latent_dim = 30 # encoder output
         self.zDim = 128
         self.kernel_size = 5
         self.pool_size = 4
+
         self.encoder_conv = nn.Sequential(
-            nn.Conv1d(1, 16, self.kernel_size, padding='same'),
+            nn.Conv1d(input_dim, 16, self.kernel_size, padding='same'),
             nn.BatchNorm1d(16),
             nn.ReLU(),
             nn.MaxPool1d(self.pool_size),
@@ -76,7 +78,8 @@ class VAE(nn.Module):
         x = x.view(-1, 64, self.latent_dim)
         if prt: print('view', x.shape)
 
-        x = torch.sigmoid(self.decoder_conv(x))
+        # x = torch.sigmoid(self.decoder_conv(x))
+        x = self.decoder_conv(x)
         if prt: print('decoder_conv', x.shape)
 
         return x

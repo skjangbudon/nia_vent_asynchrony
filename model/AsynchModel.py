@@ -3,13 +3,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class AsynchModel(nn.Module):
-    def __init__(self, input_dim=1):
+    def __init__(self, input_dim=2):
         super().__init__()
         self.latent_dim = 30 
         self.kernel_size = 5
         self.pool_size = 4
         self.encoder_conv = nn.Sequential(
-            nn.Conv1d(1, 16, self.kernel_size, padding='same'),
+            nn.Conv1d(input_dim, 16, self.kernel_size, padding='same'),
             nn.BatchNorm1d(16),
             nn.ReLU(),
             nn.MaxPool1d(self.pool_size),
