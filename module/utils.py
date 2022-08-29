@@ -1,8 +1,17 @@
 import os
 import yaml
 import json
+import os.path as osp
+import datetime
 import numpy as np
 import pandas as pd
+import torch
+
+def get_today_string(include_time=True):
+    if include_time:
+        return datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+    else:   
+        return datetime.datetime.now().strftime('%Y-%m-%d')
 
 def load_data(filename, label_file=False):
     # file_extension = filename.split('.')[-1]
@@ -40,7 +49,7 @@ def load_and_stack_data(data_files: list, label_file=False):
 
 class EarlyStopping:
     """주어진 patience 이후로 validation loss가 개선되지 않으면 학습을 조기 중지"""
-    def __init__(self, patience=7, verbose=False, delta=0, path='/'):
+    def __init__(self, patience=7, verbose=False, delta=0, path='/', checkpoint_name='checkpoint.pt'):
         """
         Args:
             patience (int): validation loss가 개선된 후 기다리는 기간
@@ -60,6 +69,7 @@ class EarlyStopping:
         self.val_loss_min = np.Inf
         self.delta = delta
         self.path = path
+        self.checkpoint_name = checkpoint_name
 
     def __call__(self, val_loss, model):
 
@@ -82,5 +92,5 @@ class EarlyStopping:
         '''validation loss가 감소하면 모델을 저장한다.'''
         if self.verbose:
             print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
-        torch.save(model.state_dict(), osp.join(self.path,'checkpoint.pt'))
+        torch.save(model.state_dict(), osp.join(self.path, self.checkpoint_name))
         self.val_loss_min = val_loss
