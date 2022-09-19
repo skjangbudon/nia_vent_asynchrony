@@ -76,7 +76,7 @@ def convert_and_write_wav_aju(config, resample_to_60hz=True, save_format=['wav']
         tmp = os.path.basename(f).split('_')
         starttime = pd.to_datetime(tmp[1])
         endtime = pd.to_datetime(tmp[2])
-        vit.index = [pd.Timestamp.fromtimestamp(i) for i in np.arange(starttime.timestamp(), endtime.timestamp(), step=1/125)]
+        vit.index = [pd.Timestamp.fromtimestamp(i, tz='utc') for i in np.arange(starttime.timestamp(), endtime.timestamp(), step=1/125)]
 
         # resampling
         if resample_to_60hz:

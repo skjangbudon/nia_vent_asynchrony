@@ -41,7 +41,7 @@ class CustomDataset(Dataset):
     return x, y
 
 def set_dataloader(dataset, drop_last=False, shuffle=False, batch_size=128, weightsampler=False):
-    num_workers = 1
+    num_workers = 20
     if weightsampler:
       y_data = dataset.y_data
       class_sample_count = np.array([len(np.where(y_data==t)[0]) for t in np.unique(y_data)])
@@ -84,7 +84,7 @@ def apply_minmaxscaling(X_test: np.array): #  # (339439, 480, 2)
     max_stat = np.nanmax(X_test, axis=1) # (instance, 2)
     return np.concatenate([((X_test[:,i,:]-min_stat)/(max_stat-min_stat+1e-5)).reshape(-1, 1, 2) for i in range(480)], axis=1) # (339439, 480, 2)
 
-def preprocess_data(dat: pd.DataFrame, make_valset = True, set_train_weightedsampler=False, scale=False):
+def preprocess_data(dat: pd.DataFrame, make_valset = True, set_train_weightedsampler=False, scale=False, target=[1,2]):
     '''
     dat: 'data'컬럼에 (480, 2) 데이터 존재해야, label 컬럼, 그 밖의 meta info 컬럼 ('flow_path', 'starttime', 'endtime', 'hospital_id_patient_id', 'wav_number', 'instance_index', 'label', 'split')
 
@@ -95,9 +95,14 @@ def preprocess_data(dat: pd.DataFrame, make_valset = True, set_train_weightedsam
     # feature = dat.loc[:,dat.columns!='label'].values
     
     if 'label' in dat:
+      if isinstance(target, list):
+        y = (dat['label'].isin(target)).values
+      elif isinstance(target, int): 
+        y = (dat['label']==target).values
+      elif target is None: # multi-class
+        y = data['label']
         # label = (dat['label']>0).values
         # y = (dat['label'].isin([1,2])).values
-        y = (dat['label']==3).values
     else:
         y = np.array([np.nan]*len(dat))
 
@@ -139,7 +144,7 @@ def preprocess_data(dat: pd.DataFrame, make_valset = True, set_train_weightedsam
         X_test = apply_minmaxscaling(X_test)
         # X_test = scaler.transform(X_test)
       testset = CustomDataset(X_test, y_test, meta_test)
-      test_dataloader = set_dataloader(testset)
+      test_dataloader = set_dataloader(testset, batch_size=1024)
 
     if make_valset&(len(y_val)>0):
       if scale:

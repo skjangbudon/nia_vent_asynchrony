@@ -12,15 +12,15 @@ class VAE(nn.Module):
         self.pool_size = 4
 
         self.encoder_conv = nn.Sequential(
-            nn.Conv1d(input_dim, 16, self.kernel_size, padding='same'),
+            nn.Conv1d(input_dim, 16, self.kernel_size, padding='same', padding_mode='replicate'),
             nn.BatchNorm1d(16),
             nn.ReLU(),
             nn.MaxPool1d(self.pool_size),
-            nn.Conv1d(16, 32, self.kernel_size, padding='same'),
+            nn.Conv1d(16, 32, self.kernel_size, padding='same', padding_mode='replicate'),
             nn.BatchNorm1d(32),
             nn.ReLU(),
             nn.MaxPool1d(self.pool_size),
-            nn.Conv1d(32, 64, self.kernel_size, padding='same'),
+            nn.Conv1d(32, 64, self.kernel_size, padding='same', padding_mode='replicate'),
             nn.BatchNorm1d(64),
             nn.ReLU()
         )
