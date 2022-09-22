@@ -66,32 +66,32 @@ def set_dataloader(dataset, drop_last=False, shuffle=False, batch_size=128, weig
               num_workers=num_workers)
 
 def apply_scaling(X_test):
-    # scaler_1 = RobustScaler() # 480개 마다 median을 구함..
+    # scaler_1 = RobustScaler() # 3600개 마다 median을 구함..
     # scaler_2 = RobustScaler()
     # X_train_1 = scaler_1.fit_transform(X_train[:,:,0])
     # X_train_2 = scaler_2.fit_transform(X_train[:,:,1])
-    # X_train = np.concatenate([X_train_1.reshape(-1,480,1),
-    #     X_train_2.reshape(-1,480,1)
+    # X_train = np.concatenate([X_train_1.reshape(-1,3600,1),
+    #     X_train_2.reshape(-1,3600,1)
     #     ], axis=2)
     X_test_1 = scaler_1.transform(X_test[:,:,0])
     X_test_2 = scaler_2.transform(X_test[:,:,1])
-    return np.concatenate([X_test_1.reshape(-1,480,1),
-        X_test_2.reshape(-1,480,1)
+    return np.concatenate([X_test_1.reshape(-1,3600,1),
+        X_test_2.reshape(-1,3600,1)
         ], axis=2)
 
-def apply_minmaxscaling(X_test: np.array): #  # (339439, 480, 2)
+def apply_minmaxscaling(X_test: np.array): #  # (339439, 3600, 2)
     min_stat = np.nanmin(X_test, axis=1) # (instance, 2)
     max_stat = np.nanmax(X_test, axis=1) # (instance, 2)
-    return np.concatenate([((X_test[:,i,:]-min_stat)/(max_stat-min_stat+1e-5)).reshape(-1, 1, 2) for i in range(480)], axis=1) # (339439, 480, 2)
+    return np.concatenate([((X_test[:,i,:]-min_stat)/(max_stat-min_stat+1e-5)).reshape(-1, 1, 2) for i in range(3600)], axis=1) # (339439, 3600, 2)
 
 def preprocess_data(dat: pd.DataFrame, make_valset = True, set_train_weightedsampler=False, scale=False, target=[1,2]):
     '''
-    dat: 'data'컬럼에 (480, 2) 데이터 존재해야, label 컬럼, 그 밖의 meta info 컬럼 ('flow_path', 'starttime', 'endtime', 'hospital_id_patient_id', 'wav_number', 'instance_index', 'label', 'split')
+    dat: 'data'컬럼에 (3600, 2) 데이터 존재해야, label 컬럼, 그 밖의 meta info 컬럼 ('flow_path', 'starttime', 'endtime', 'hospital_id_patient_id', 'wav_number', 'instance_index', 'label', 'split')
 
     '''
     train_dataloader, val_dataloader, test_dataloader = None, None, None
-    dat = dat[dat['data'].apply(lambda x: x.shape)==(480,2)] # data dimension 맞는 것만 (임시)
-    X = np.concatenate([i.reshape(1, 480, -1) for i in dat['data'].tolist()])
+    dat = dat[dat['data'].apply(lambda x: x.shape)==(3600,2)] # data dimension 맞는 것만
+    X = np.concatenate([i.reshape(1, 3600, -1) for i in dat['data'].tolist()])
     # feature = dat.loc[:,dat.columns!='label'].values
     
     if 'label' in dat:
