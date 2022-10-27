@@ -27,8 +27,6 @@ import module.utils as cutils
 # os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"  # Arrange GPU devices starting from 0
 
-print('Current cuda device:', torch.cuda.current_device())
-print('Count of using GPUs:', torch.cuda.device_count())
 
 def main(config):
     ckpt_path = config['ckpt_path']
@@ -37,6 +35,8 @@ def main(config):
     result_path = config['result_path']
     
     os.environ["CUDA_VISIBLE_DEVICES"]= str(config['CUDA_VISIBLE_DEVICES'])
+    print('Current cuda device:', torch.cuda.current_device())
+    print('Count of using GPUs:', torch.cuda.device_count())
 
     # load model
     ckpt_dict = torch.load(ckpt_path)
