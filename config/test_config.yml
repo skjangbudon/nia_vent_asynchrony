@@ -1,0 +1,5 @@
+ckpt_path: '/VOLUME/nia_vent_asynchrony/result/2nd_pat150/train/2022-09-22-02-42-56/ventdys_model.pt'
+data_path: /VOLUME/nia_vent_asynchrony/data/processed_data/aju/instance_aju_2-402_2-521_265119_2022-10-25.pkl
+result_path: '/VOLUME/nia_vent_asynchrony/result/5th_aju/infer'
+threshold: 0.99
+CUDA_VISIBLE_DEVICES: 2

@@ -1,0 +1,17 @@
+label_path: '/ext_ssd2/nia_vent/label_annotation'
+data_path: 
+- /VOLUME/nia_vent_asynchrony/data/processed_data/snu/instance_snu_1-200_1-299_108046_2022-10-27.pkl
+# - /VOLUME/nia_vent_asynchrony/data/processed_data/snu/instance_snu_1-300_1-379_120019_2022-10-27.pkl
+# - /VOLUME/nia_vent_asynchrony/data/processed_data/aju/instance_aju_2-005_2-197_308238_2022-10-24.pkl
+train_id:
+- 1-2[0-8]*
+# - 2-0[2-3]*
+validation_id:
+- 1-29*
+# - 1-300
+# - 2-09*
+# - 2-1*
+result_dir: '/VOLUME/nia_vent_asynchrony/result/pilot'
+CUDA_VISIBLE_DEVICES: 2
+n_epochs: 50
+learning_rate: 0.001
