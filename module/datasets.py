@@ -1,3 +1,8 @@
+import json
+import time
+import os
+import os.path as osp
+
 import pandas as pd
 import numpy as np
 import torch
@@ -43,7 +48,7 @@ class CustomDataset(Dataset):
 def set_dataloader(dataset, drop_last=False, shuffle=False, batch_size=128, weightsampler=False):
     num_workers = 20
     if weightsampler:
-      y_data = dataset.y_data
+      y_data = (dataset.y_data>0).long() # 0 vs 1+3
       class_sample_count = np.array([len(np.where(y_data==t)[0]) for t in np.unique(y_data)])
 
       class_weights = 1./class_sample_count 
@@ -100,7 +105,7 @@ def preprocess_data(dat: pd.DataFrame, make_valset = True, set_train_weightedsam
       elif isinstance(target, int): 
         y = (dat['label']==target).values
       elif target is None: # multi-class
-        y = data['label']
+        y = dat['label'].values
         # label = (dat['label']>0).values
         # y = (dat['label'].isin([1,2])).values
     else:
@@ -189,3 +194,106 @@ def setup_data(X, y, make_valset=False):
       print('Y class distribution', sum(y_train==1)/len(y_train), sum(y_test==1)/len(y_test))
 
     return train_dataloader, val_dataloader, test_dataloader
+
+
+def annotation_dict_to_dataframe(row):
+    '''
+    input : pd.Series(['1-206', '1-206-013.csv',13, '[{"startTime": 424.00848, "endTime": 431.99197300000003, "duration": 7.98349300000001, "extra": {"value": "noise", "label": "Noise"}}, ...')
+    output : 2 rows, pd.DataFrame(columns=['startTime', 'endTime', 'duration', 'extra','pat_id','wav_number'], ... ) 
+    '''
+    df = pd.concat([pd.Series(i).to_frame().transpose() for i in eval(row['annotation'])])
+    df['hospital_id_patient_id'] = row['pat_id']
+    df['wav_number'] = row['wav_number']
+    return df
+
+def preprocess_label_file(filename:str)-> pd.DataFrame:
+    '''
+    input : '/ext_ssd2/nia_vent/label_annotation/1-206.json
+    output :  54 rows, pd.DataFrame(columns=['startTime', 'endTime', 'duration', 'extra', 'pat_id', 'wav_number'], ...)
+    '''    
+    records = [json.loads(line) for line in open(filename, encoding='utf-8-sig')]
+    df = pd.DataFrame(records).drop(columns=['name_VentilatorWeaning','wav_result_PRESSURE'])
+    res = df['csv_path_FLOW'].str.split('/').apply(pd.Series)
+    res.columns = ['pat_id','dropcol','csv']
+    res['wav_number'] = res['csv'].str.replace('.csv','').str.split('-').str[-1].astype(int)
+    res = res.drop(columns='dropcol')
+    res['annotation'] = df['wav_result_FLOW']
+    res = pd.concat(res.apply(annotation_dict_to_dataframe, axis=1).tolist()) # ['startTime', 'endTime', 'duration', 'extra', 'pat_id', 'wav_number', 'label_annotation']
+    return res
+
+def annotate(tmp:pd.DataFrame, prt=True)-> pd.DataFrame:
+    annv = tmp['extra'].apply(lambda x: x['value'])
+    if prt: print(annv.value_counts())
+    tmp['label_annotation'] = 0
+    # tmp.loc[tmp['extra']=={'value': 'normal', 'label': 'Normal'}, 'label_annotation'] = 0
+    tmp.loc[annv=='true','label_annotation'] = 1
+    tmp.loc[annv=='false','label_annotation'] = 2
+    tmp.loc[annv=='noise','label_annotation'] = 3
+    return tmp.drop(columns=['extra'])
+
+
+def get_wav_firsttime(fi):
+    if os.path.exists(fi):
+        return pd.to_datetime(pd.read_csv(fi, nrows=1)['Time'].iloc[0])
+    else:
+        return np.nan
+
+def annotate_each_label(label_num:int, ann_df:pd.DataFrame, feature_df:pd.DataFrame):
+    common_keys = ['hospital_id_patient_id','wav_number'] if 'wav_number' in ann_df.columns else ['hospital_id_patient_id']
+    ann_data = pd.merge(feature_df, ann_df[ann_df['label_annotation']==label_num], on=common_keys)
+    cond1 = (ann_data['starttime']<=ann_data['ann_start'])&(ann_data['endtime']>=ann_data['ann_end']) # anntation이 instance 에 포함
+    cond2 = (ann_data['starttime']<=ann_data['ann_start'])&(ann_data['endtime']>=ann_data['ann_start']) # annotation start가 instance 에 포함
+    cond3 = (ann_data['starttime']<=ann_data['ann_end'])&(ann_data['endtime']>=ann_data['ann_end']) # annotation end가 instance 에 포함
+    ann_index = ann_data[cond1|cond2|cond3]['instance_index']
+    return ann_index
+
+def annotate_one_instance_file(data_path, ann_df):
+    '''
+    input: instance file path (e.g. '/VOLUME/nia_vent_asynchrony/data/processed_data/snu/instance_snu_1-200_1-299_108046_2022-10-27.pkl')
+
+    output: pd.DataFrame(columns=['flow_path', 'starttime', 'endtime', 'data', 'hospital_id',
+        'patient_id', 'wav_number', 'hospital_id_patient_id', 'instance_index',
+        'label'],...)
+    '''
+    print('read', data_path)
+    # 1분단위 instance 데이터 파일 읽기
+    # columns: ['flow_path', 'starttime', 'endtime', 'data', 'hospital_id', 'patient_id', 'wav_number', 'hospital_id_patient_id']
+    feature_df = pd.read_pickle(data_path) # 6 secs
+    print(len(feature_df[['hospital_id_patient_id']].drop_duplicates()),'patients in feature file')
+    print(len(feature_df[['hospital_id_patient_id','wav_number']].drop_duplicates()),'waveforms in feature file')
+    print(len(feature_df), 'instances in feature file')
+
+    # 어노테이션 있는 파형만 가져옴
+    feature_df = pd.merge(feature_df, ann_df[['hospital_id_patient_id','wav_number']].drop_duplicates())
+    print(len(feature_df[['hospital_id_patient_id','wav_number']].drop_duplicates()),'waveforms exist annotations')
+    print(len(feature_df), 'instances exist annotations')
+        
+    # 어노테이션 시간 기준을 float에서 timestamp로 변환. 이때 파형 파일을 읽어 첫 시작 시간 가져옴
+    unique_wav_df = feature_df[['hospital_id_patient_id','wav_number','flow_path']].drop_duplicates()
+    unique_wav_df['wav_firsttime'] = unique_wav_df['flow_path'].apply(get_wav_firsttime)
+    assert unique_wav_df['wav_firsttime'].isna().sum()==0, 'first time of waveform file is unknown'
+
+    ann_df_feature = pd.merge(ann_df, unique_wav_df, on=['hospital_id_patient_id','wav_number'])
+    ann_df_feature['ann_start'] = ann_df_feature['wav_firsttime']+ann_df_feature['ann_startTime_float'].apply(lambda x: pd.Timedelta(seconds=x))
+    ann_df_feature['ann_end'] = ann_df_feature['wav_firsttime']+ann_df_feature['ann_endTime_float'].apply(lambda x: pd.Timedelta(seconds=x))
+
+    # instance 1분간 어노테이션 존재 시 라벨링 (우선 순위 1 true > 2 false > 3 noise )
+    feature_df['instance_index'] = range(len(feature_df))
+    ann_index_3 = annotate_each_label(3, ann_df_feature, feature_df)
+    ann_index_2 = annotate_each_label(2, ann_df_feature, feature_df)
+    ann_index_1 = annotate_each_label(1, ann_df_feature, feature_df)
+    print(len(ann_index_1), len(ann_index_2), len(ann_index_3))
+
+    feature_df['label'] = 0
+    feature_df.loc[feature_df['instance_index'].isin(ann_index_3),'label'] = 3 # noise
+    feature_df.loc[feature_df['instance_index'].isin(ann_index_2),'label'] = 2 # false asynchrony
+    feature_df.loc[feature_df['instance_index'].isin(ann_index_1),'label'] = 1 # true asynchrony
+    print(feature_df.label.value_counts())
+    feature_df.loc[feature_df['instance_index'].isin(ann_index_2),'label'] = 1
+    feature_df.loc[feature_df['instance_index'].isin(ann_index_3),'label'] = 2
+    print(' false asynchrony(2) merge with true asynchrony(1)')
+    print(' noise (3) change to noise(2)')
+    print(feature_df.label.value_counts())
+
+    feature_df = feature_df.loc[:,feature_df.columns!='instance_index'] # aju
+    return feature_df

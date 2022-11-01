@@ -1,5 +1,8 @@
-ckpt_path: '/VOLUME/nia_vent_asynchrony/result/2nd_pat150/train/2022-09-22-02-42-56/ventdys_model.pt'
-data_path: /VOLUME/nia_vent_asynchrony/data/processed_data/aju/instance_aju_2-402_2-521_265119_2022-10-25.pkl
-result_path: '/VOLUME/nia_vent_asynchrony/result/5th_aju/infer'
-threshold: 0.99
-CUDA_VISIBLE_DEVICES: 2
+ckpt_path: '/VOLUME/nia_vent_asynchrony/result/pilot/2022-10-31-08-55-01/ventdys_model.pt'
+label_path: '/ext_ssd2/nia_vent/label_annotation'
+data_path: 
+- /VOLUME/nia_vent_asynchrony/data/processed_data/snu/instance_snu_1-300_1-379_120019_2022-10-27.pkl
+test_id:
+- 1-300
+result_path: '/VOLUME/nia_vent_asynchrony/result/pilot'
+CUDA_VISIBLE_DEVICES: 3

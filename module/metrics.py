@@ -1,5 +1,6 @@
 from sklearn.metrics import roc_auc_score, average_precision_score
 from sklearn.metrics import confusion_matrix
+from sklearn.metrics import precision_score, recall_score, f1_score, classification_report
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -12,6 +13,25 @@ eval_metrics.extend(['tn','fp','fn','tp'])
 eval_metrics.extend(['auroc','auprc'])
 eval_metrics.extend(['auprcf1'])
 
+def calculate_multiclass_metrics(target, preds, target_names=None):
+    target = target.reshape(-1)
+    preds = preds.reshape(-1)
+    
+    average_type = ['micro', 'macro']
+    metrics = ['precision_score', 'recall_score', 'f1_score']
+    m_dict = {}
+    
+    for av in average_type:
+        for met in metrics:
+            m_dict[met+'_'+av] = eval(met)(target, preds, average=av)
+    
+    print(m_dict)
+    rep = classification_report(target, preds, target_names=target_names)
+    print(rep)
+    m_dict['classification_report'] = rep
+    return m_dict
+        
+    
 def calculate_any_metrics(target, metrics, preds=None, probs=None, logits=None, 
     num_classes=None, n_round=2, threshold=0.5):
     assert all(m in ['prec','recall','f1','f2','specificity',
@@ -69,17 +89,30 @@ def transform_logit(logits, target=None, prt_shape=False):
     if prt_shape: print('logits', logits.shape)
         
     # logits2probs
-    if len(logits.shape)>1 and logits.shape[1]>1: # torch.Size([64, 2])
+    # multi-class
+    multiclass = False
+    if len(logits.shape)>1 and logits.shape[1]>2: # torch.Size([64, 3])
+        multiclass = True
+        
+    if multiclass: # torch.Size([64, 3])
+        probs_all = F.softmax(logits, dim=1)
+        probs, preds = torch.max(probs_all, dim=1) 
+        # probs: tensor([0.6784, 0.5780, 0.5659, 0.7440, 0.7181])
+        # preds: tensor([2, 0, 0, 0, 1])
+    
+    # binary
+    elif len(logits.shape)>1 and logits.shape[1]==2: # logits: torch.Size([64, 2])
         probs = F.softmax(logits, dim=1)[:,1]
-    if len(logits.shape)>1 and logits.shape[1]==1: # torch.Size([64, 1])
-        probs = torch.sigmoid(logits)[:,0]        
+    elif len(logits.shape)>1 and logits.shape[1]==1: # logits: torch.Size([64, 1])
+        probs = torch.sigmoid(logits)[:,0]
     elif len(logits.shape)==1: # torch.Size([64])
         probs = torch.sigmoid(logits)
 
     if prt_shape: print('probs', probs.shape) # torch.Size([64])
     
     #probs2preds
-    preds = (probs>0.5).long() # torch.Size([64])
+    if ~multiclass:
+        preds = (probs>0.5).long() # torch.Size([64])
     
     if target is not None:
         preds = preds.reshape(target.shape) #torch.Size([64, 1])

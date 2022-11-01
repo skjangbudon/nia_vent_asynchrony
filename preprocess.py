@@ -6,12 +6,12 @@ import os.path as osp
 import multiprocessing
 import argparse
 from functools import partial
+import warnings
+warnings.filterwarnings("ignore")
 
 import numpy as np
 import pandas as pd
 import torch
-
-os.chdir('/VOLUME/nia_vent_asynchrony')
 
 import module.utils as cutils
 
@@ -107,7 +107,7 @@ def main():
     tmp_flow.groupby('hospital_id_patient_id').count()
     ], axis=1)
     gr_stat.to_csv('file_count.csv')
-    print(np.where(gr_stat.iloc[:,0]!=gr_stat.iloc[:,5]))
+    print('WARNING: unmatched', np.where(gr_stat.iloc[:,0]!=gr_stat.iloc[:,5]))
 
 
     # divide data into 60 sec 
@@ -129,13 +129,12 @@ def main():
         if i is not None:
             data.append(i)
     datadf = pd.concat(data)
-    print(time.time()-since)
-    # 7029 csv file, 70 threads, elapsed 27 mins
-    # 9008 csv file, 30 threads, elapsed 70 mins
+    print('elapsed time (sec):', time.time()-since)
+    # 2118 csv file, 50 threads, elapsed  mins
 
     # write results
     nowDate = cutils.get_today_string(False)
-    dest_path = osp.join(dest_dir, org, f'instance_{org}_{len(datadf)}_{nowDate}.pkl')
+    # dest_path = osp.join(dest_dir, org, f'instance_{org}_{len(datadf)}_{nowDate}.pkl')
     # print(dest_path)
     # datadf.to_pickle(dest_path)
 
