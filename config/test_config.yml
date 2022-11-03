@@ -4,5 +4,5 @@ data_path:
 - /VOLUME/nia_vent_asynchrony/data/processed_data/snu/instance_snu_1-300_1-379_120019_2022-10-27.pkl
 test_id:
 - 1-300
-result_path: '/VOLUME/nia_vent_asynchrony/result/pilot'
+result_dir: '/VOLUME/nia_vent_asynchrony/result/pilot/test'
 CUDA_VISIBLE_DEVICES: 3

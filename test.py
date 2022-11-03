@@ -36,9 +36,12 @@ def main():
         
     ckpt_path = config['ckpt_path']
     data_path = config['data_path']
-    RESULT_PATH = config['result_path']
+    
+    nowDate = cutils.get_today_string()
+    RESULT_PATH = osp.join(config['result_dir'], nowDate)
     os.makedirs(RESULT_PATH, exist_ok=True)
-
+    print('RESULT_PATH:', RESULT_PATH)
+    
     os.environ["CUDA_VISIBLE_DEVICES"]= str(config['CUDA_VISIBLE_DEVICES'])
     print('Current cuda device:', torch.cuda.current_device())
     print('Count of using GPUs:', torch.cuda.device_count())
@@ -141,9 +144,9 @@ def main():
     if 'label' in testset_pred.columns:
         testset_pred['y_target'] = testset_pred['label']
 
-    eval_score = calculate_multiclass_metrics(testset_pred['y_target'].values, testset_pred['y_pred'].values, ['normal','asynchrony','noise'])
-    path = osp.join(RESULT_PATH, 'score.csv')
-    pd.DataFrame(eval_score, index=['score']).to_csv(path)
+    eval_score, report = calculate_multiclass_metrics(testset_pred['y_target'].values, testset_pred['y_pred'].values, ['normal','asynchrony','noise'])
+    pd.DataFrame(report).to_csv(osp.join(RESULT_PATH, 'classification_report.csv'))
+    pd.DataFrame(eval_score, index=['score']).to_csv(osp.join(RESULT_PATH, 'score.csv'))
                     
     print(testset_pred['hospital_id_patient_id'].unique(), 'hospital_id_patient_id')
 
