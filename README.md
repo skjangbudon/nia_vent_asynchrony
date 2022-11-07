@@ -4,6 +4,26 @@
 인해 예후가 좋지 않음. 따라서 지속적으로 기계환기 그래프 파형을 관찰하여 비동시성을 
 감시해야 함. 그러나 이에 따라 전문의료인의 노동력이 소모되므로 호흡 주기 부조화를 자동적으로 감지하는 모델은 불필요한 의료 비용을 감소시킬 수 있음
 
+## 0. Settings
+```
+# download source code
+$ git clone https://github.com/skjangbudon/nia_vent_asynchrony.git
+
+# create docker image using .tar file 
+$ docker import nia_vent_asynchrony.tar nia_vent:asynchrony
+
+# run bash command in a new container
+$ docker run -dit -v (path):/VOLUME --name nia_vent_async nia_vent:asynchrony bash
+
+# example :
+$ docker run -dit -v /data/project/nia_vent:/VOLUME -v /ext_ssd:/ext_ssd  -v /ext_ssd2:/ext_ssd2 -w /VOLUME/nia_vent_asynchrony  --name nia_vent_async --shm-size 300G -p 9021-9022:9021-9022 --gpus all nia_vent:asynchrony bash
+
+# execute a running container
+$ docker exec -it nia_vent_async bash
+
+$ cd /VOLUME/nia_vent_asynchrony
+```
+
 ## 1. Data Preprocessing
 > python preprocess.py --config config/preprocess_config.yml
 
@@ -18,3 +38,45 @@ csv형식의 waveform 파일을 입력받아 1분 단위의 instance로 변환�
 > python test.py --config config/test_config.yml
 
 훈련에 사용되지 않은 테스트셋으로 훈련된 모델을 평가함
+
+## cf. model structure
+```
+===================================================================================================================
+Layer (type:depth-idx)                   Input Shape               Output Shape              Param #
+===================================================================================================================
+AsynchModel                              [16, 2, 3600]             [16, 3]                   --
+├─Sequential: 1-1                        [16, 2, 3600]             [16, 64, 56]              --
+│    └─Conv1d: 2-1                       [16, 2, 3600]             [16, 16, 3600]            176
+│    └─BatchNorm1d: 2-2                  [16, 16, 3600]            [16, 16, 3600]            32
+│    └─ReLU: 2-3                         [16, 16, 3600]            [16, 16, 3600]            --
+│    └─MaxPool1d: 2-4                    [16, 16, 3600]            [16, 16, 900]             --
+│    └─Conv1d: 2-5                       [16, 16, 900]             [16, 32, 900]             2,592
+│    └─BatchNorm1d: 2-6                  [16, 32, 900]             [16, 32, 900]             64
+│    └─ReLU: 2-7                         [16, 32, 900]             [16, 32, 900]             --
+│    └─MaxPool1d: 2-8                    [16, 32, 900]             [16, 32, 225]             --
+│    └─Conv1d: 2-9                       [16, 32, 225]             [16, 32, 225]             5,152
+│    └─BatchNorm1d: 2-10                 [16, 32, 225]             [16, 32, 225]             64
+│    └─ReLU: 2-11                        [16, 32, 225]             [16, 32, 225]             --
+│    └─MaxPool1d: 2-12                   [16, 32, 225]             [16, 32, 56]              --
+│    └─Conv1d: 2-13                      [16, 32, 56]              [16, 64, 56]              10,304
+│    └─BatchNorm1d: 2-14                 [16, 64, 56]              [16, 64, 56]              128
+│    └─ReLU: 2-15                        [16, 64, 56]              [16, 64, 56]              --
+├─Sequential: 1-2                        [16, 64, 56]              [16, 64]                  --
+│    └─AdaptiveAvgPool1d: 2-16           [16, 64, 56]              [16, 64, 1]               --
+│    └─Flatten: 2-17                     [16, 64, 1]               [16, 64]                  --
+├─Sequential: 1-3                        [16, 64]                  [16, 3]                   --
+│    └─Linear: 2-18                      [16, 64]                  [16, 32]                  2,080
+│    └─ReLU: 2-19                        [16, 32]                  [16, 32]                  --
+│    └─Linear: 2-20                      [16, 32]                  [16, 3]                   99
+===================================================================================================================
+Total params: 20,691
+Trainable params: 20,691
+Non-trainable params: 0
+Total mult-adds (M): 75.28
+===================================================================================================================
+Input size (MB): 0.46
+Forward/backward pass size (MB): 24.88
+Params size (MB): 0.08
+Estimated Total Size (MB): 25.43
+===================================================================================================================
+```
