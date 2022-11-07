@@ -103,7 +103,7 @@ def set_logger(tag, path='.'):
 
 class EarlyStopping:
     """주어진 patience 이후로 validation loss가 개선되지 않으면 학습을 조기 중지"""
-    def __init__(self, patience=7, verbose=False, delta=0, path='/', checkpoint_name='checkpoint.pt'):
+    def __init__(self, patience=7, verbose=False, delta=0, path='/', checkpoint_name='checkpoint.pt', logger=None):
         """
         Args:
             patience (int): validation loss가 개선된 후 기다리는 기간
@@ -124,6 +124,7 @@ class EarlyStopping:
         self.delta = delta
         self.path = path
         self.checkpoint_name = checkpoint_name
+        self.logger = logger
 
     def __call__(self, val_loss, model):
 
@@ -134,7 +135,11 @@ class EarlyStopping:
             self.save_checkpoint(val_loss, model)
         elif score < self.best_score + self.delta:
             self.counter += 1
-            print(f'EarlyStopping counter: {self.counter} out of {self.patience}')
+            if self.logger:
+                self.logger.info(f'EarlyStopping counter: {self.counter} out of {self.patience}')
+            else:
+                print(f'EarlyStopping counter: {self.counter} out of {self.patience}')
+
             if self.counter >= self.patience:
                 self.early_stop = True
         else:
@@ -145,6 +150,9 @@ class EarlyStopping:
     def save_checkpoint(self, val_loss, model):
         '''validation loss가 감소하면 모델을 저장한다.'''
         if self.verbose:
-            print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
+            if self.logger:
+                self.logger.info(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
+            else:
+                print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
         torch.save(model.state_dict(), osp.join(self.path, self.checkpoint_name))
         self.val_loss_min = val_loss
