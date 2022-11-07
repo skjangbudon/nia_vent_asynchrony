@@ -2,6 +2,7 @@ from sklearn.metrics import roc_auc_score, average_precision_score
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import precision_score, recall_score, f1_score, classification_report
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn.functional as F
 from torchmetrics.functional import confusion_matrix as tm_confusion_matrix
@@ -25,11 +26,8 @@ def calculate_multiclass_metrics(target, preds, target_names=None):
         for met in metrics:
             m_dict[met+'_'+av] = eval(met)(target, preds, average=av)
     
-    print(m_dict)
-    rep = classification_report(target, preds, target_names=target_names)
-    print(rep)
-    m_dict['classification_report'] = rep
-    return m_dict
+    report = classification_report(target, preds, target_names=target_names, output_dict=True)
+    return m_dict, pd.DataFrame(report)
         
     
 def calculate_any_metrics(target, metrics, preds=None, probs=None, logits=None, 

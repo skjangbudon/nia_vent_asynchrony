@@ -3,6 +3,8 @@ import yaml
 import json
 import os.path as osp
 import datetime
+import logging
+
 import numpy as np
 import pandas as pd
 import torch
@@ -46,6 +48,58 @@ def load_and_stack_data(data_files: list, label_file=False):
     print(data_df.shape)
     return data_df
 
+def print_environment():
+    import os
+    import torch
+
+    # 1. cpu
+    print(os.system('lscpu | grep "Architecture"'))
+    print(os.system('lscpu | grep "Model name"'))
+    print(os.system('lscpu | grep "^CPU(s):"'))
+
+    # 2. gpu
+    print(os.system('nvidia-smi'))
+
+    # 3. RAM
+    print(os.system('free -g'))
+
+    # 4.HDD
+    print(os.system('df -h'))
+
+    # 5. OS
+    print(os.system('lsb_release -a'))
+
+    # 6. Pytorch
+    print(torch.__version__)
+
+
+def get_logger(name, level=logging.DEBUG, resetlogfile=False, path='log'):
+    formatter = logging.Formatter('[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s')
+
+    fname = os.path.join(path, name+'.log')
+    os.makedirs(path, exist_ok=True) 
+    if resetlogfile :
+        if os.path.exists(fname):
+            os.remove(fname) 
+    logger = logging.getLogger(name)
+    logger.handlers.clear()
+    logger.setLevel(level)
+
+    ch = logging.StreamHandler()
+    ch.setLevel(level)
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+
+    fh = logging.FileHandler(fname)
+    fh.setLevel(level)
+    fh.setFormatter(formatter)
+    logger.addHandler(fh)
+    return logger
+
+def set_logger(tag, path='.'):
+    logger = get_logger(f'{tag}', resetlogfile=True, path=path)
+    logger.setLevel(logging.INFO)
+    return logger
 
 class EarlyStopping:
     """주어진 patience 이후로 validation loss가 개선되지 않으면 학습을 조기 중지"""
