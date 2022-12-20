@@ -1,4 +1,5 @@
-org: 'aju' # snu, 'aju' # this oranization name is used for filename that comes from preprocessing
-flow_path: '/ext_ssd/nia_vent/aju/220919/2-1*/AWF/*.csv'
+org: 'snu' # snu, 'aju' # this oranization name is used for filename that comes from preprocessing
+flow_path:  
+ - '/ext_ssd/nia_vent/snu/20220930/1-4[7-9]*/AWF/*.csv'
 dest_dir: '/VOLUME/nia_vent_asynchrony/data/processed_data'
 n_threads: 50

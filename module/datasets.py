@@ -46,7 +46,7 @@ class CustomDataset(Dataset):
     return x, y
 
 def set_dataloader(dataset, drop_last=False, shuffle=False, batch_size=128, weightsampler=False):
-    num_workers = 20
+    num_workers = 50
     if weightsampler:
       y_data = (dataset.y_data>0).long() # 0 vs 1+3
       class_sample_count = np.array([len(np.where(y_data==t)[0]) for t in np.unique(y_data)])
@@ -140,8 +140,8 @@ def preprocess_data(dat: pd.DataFrame, make_valset = True, set_train_weightedsam
 
     if (len(y_train)>0):
       if scale:
-        X_train = apply_minmaxscaling(X_train)
-        # X_test = scaler.transform(X_test)
+        for i in range(len(X_train)//100000):
+          X_train[i*100000:min(i*100000+100000, len(X_train))] = apply_minmaxscaling(X_train[i*100000:min(i*100000+100000, len(X_train))])
       trainset = CustomDataset(X_train, y_train, meta_train)
       train_dataloader = set_dataloader(trainset, drop_last=True, shuffle=True, weightsampler=set_train_weightedsampler)
     if (len(y_test)>0):
@@ -201,7 +201,7 @@ def annotation_dict_to_dataframe(row):
     input : pd.Series(['1-206', '1-206-013.csv',13, '[{"startTime": 424.00848, "endTime": 431.99197300000003, "duration": 7.98349300000001, "extra": {"value": "noise", "label": "Noise"}}, ...')
     output : 2 rows, pd.DataFrame(columns=['startTime', 'endTime', 'duration', 'extra','pat_id','wav_number'], ... ) 
     '''
-    df = pd.concat([pd.Series(i).to_frame().transpose() for i in eval(row['annotation'])])
+    df = pd.concat([pd.Series(i).to_frame().transpose() for i in row['annotation']])
     df['hospital_id_patient_id'] = row['pat_id']
     df['wav_number'] = row['wav_number']
     return df
@@ -211,14 +211,20 @@ def preprocess_label_file(filename:str)-> pd.DataFrame:
     input : '/ext_ssd2/nia_vent/label_annotation/1-206.json
     output :  54 rows, pd.DataFrame(columns=['startTime', 'endTime', 'duration', 'extra', 'pat_id', 'wav_number'], ...)
     '''    
-    records = [json.loads(line) for line in open(filename, encoding='utf-8-sig')]
+    with open(filename, encoding='utf-8-sig') as f:
+      records = json.load(f)['Patient_Data']
     df = pd.DataFrame(records).drop(columns=['name_VentilatorWeaning','wav_result_PRESSURE'])
-    res = df['csv_path_FLOW'].str.split('/').apply(pd.Series)
-    res.columns = ['pat_id','dropcol','csv']
-    res['wav_number'] = res['csv'].str.replace('.csv','').str.split('-').str[-1].astype(int)
-    res = res.drop(columns='dropcol')
-    res['annotation'] = df['wav_result_FLOW']
-    res = pd.concat(res.apply(annotation_dict_to_dataframe, axis=1).tolist()) # ['startTime', 'endTime', 'duration', 'extra', 'pat_id', 'wav_number', 'label_annotation']
+    if records[0]['csv_path_FLOW']=='ALL':
+      res = pd.DataFrame(records[0]['wav_result_FLOW'])
+      res['hospital_id_patient_id'] = filename.split('/')[-1].split('.json')[0]
+      res['wav_number'] = 1
+    else:
+      res = df['csv_path_FLOW'].str.replace('.csv.csv','.csv').str.replace('.vital','').str.split('/').apply(pd.Series)
+      res.columns = ['pat_id','dropcol','csv']
+      res['wav_number'] = res['csv'].str.replace('.csv','').str.split('-').str[-1].astype(int)
+      res = res.drop(columns='dropcol')
+      res['annotation'] = df['wav_result_FLOW']
+      res = pd.concat(res.apply(annotation_dict_to_dataframe, axis=1).tolist()) # ['startTime', 'endTime', 'duration', 'extra', 'pat_id', 'wav_number']
     return res
 
 def annotate(tmp:pd.DataFrame, prt=True)-> pd.DataFrame:
@@ -270,8 +276,8 @@ def annotate_one_instance_file(data_path, ann_df):
         
     # 어노테이션 시간 기준을 float에서 timestamp로 변환. 이때 파형 파일을 읽어 첫 시작 시간 가져옴
     unique_wav_df = feature_df[['hospital_id_patient_id','wav_number','flow_path']].drop_duplicates()
-    unique_wav_df['wav_firsttime'] = unique_wav_df['flow_path'].apply(get_wav_firsttime)
-    assert unique_wav_df['wav_firsttime'].isna().sum()==0, 'first time of waveform file is unknown'
+    unique_wav_df['wav_firsttime'] = unique_wav_df['flow_path'].apply(get_wav_firsttime) # NOTE: It requires raw flow files exist
+    assert unique_wav_df['wav_firsttime'].isna().sum()==0, 'first time of waveform file is unknown'+ ', '.join(unique_wav_df[unique_wav_df['wav_firsttime'].isna()]['flow_path'].tolist())
 
     ann_df_feature = pd.merge(ann_df, unique_wav_df, on=['hospital_id_patient_id','wav_number'])
     ann_df_feature['ann_start'] = ann_df_feature['wav_firsttime']+ann_df_feature['ann_startTime_float'].apply(lambda x: pd.Timedelta(seconds=x))

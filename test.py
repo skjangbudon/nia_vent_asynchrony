@@ -65,12 +65,12 @@ def main():
     for pat_range in config['test_id']:
         path_regex = osp.join(config['label_path'], pat_range+'.json')
         files = glob.glob(path_regex)
-        logger.info(path_regex+str(len(files))+'files')
+        logger.info(path_regex+str(len(files))+' files')
         label_path_list.extend(files)
 
 
     # 어노테이션 파일 모두 읽기
-    logger.info('preprocess'+ len(label_path_list)+ 'label files')
+    logger.info('preprocess '+ str(len(label_path_list))+ ' label files')
     label_list = []
     for label_path in label_path_list:
         res = preprocess_label_file(label_path)
@@ -83,9 +83,9 @@ def main():
     ann_df = ann_df.rename(columns={'startTime':'ann_startTime_float', 'endTime':'ann_endTime_float'})
     # columns: ['ann_startTime', 'ann_endTime', 'duration', 'pat_id', 'wav_number','label_annotation']
 
-    logger.info(str(len(ann_df[['hospital_id_patient_id']].drop_duplicates()))+'patients in label file')
-    logger.info(str(len(ann_df[['hospital_id_patient_id','wav_number']].drop_duplicates()))+'wav in label file')
-    logger.info(str(len(ann_df))+'annotations in label file')
+    logger.info(str(len(ann_df[['hospital_id_patient_id']].drop_duplicates()))+' patients in label file')
+    logger.info(str(len(ann_df[['hospital_id_patient_id','wav_number']].drop_duplicates()))+' wav in label file')
+    logger.info(str(len(ann_df))+' annotations in label file')
 
 
     # feature 에 라벨 달기
@@ -100,7 +100,8 @@ def main():
     logger.info('label statistics')
     logger.info(feature_df['label'].value_counts())
     logger.info(feature_df['label'].value_counts(normalize=True))
-    
+    logger.info('no. hospital_id_patient_id by set')
+    logger.info(feature_df.groupby(['split'])['hospital_id_patient_id'].nunique())
     
     labelfreq = pd.concat([feature_df.groupby('split')['label'].value_counts(),
     feature_df.groupby('split')['label'].value_counts(normalize=True)], axis=1)
@@ -112,7 +113,8 @@ def main():
     # load model
     ckpt_dict = torch.load(ckpt_path)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    logger.info(ckpt_path, device)
+    logger.info(ckpt_path)
+    logger.info(device)
     ventdys_model = AsynchModel(input_dim=2, padding_mode='replicate', num_class=feature_df['label'].nunique()).to(device)
     ventdys_model.load_state_dict(ckpt_dict, strict=False)
 
@@ -143,7 +145,7 @@ def main():
         y_pred = preds if y_pred is None else torch.cat([y_pred, preds])
         
         # pred_list.append(out.detach().cpu().numpy())
-        if i_step%1000==0: logger.info('step', i_step, 'loss', loss.item())
+        if i_step%1000==0: logger.info(f'step {i_step} loss {loss.item()}')
 
 
 
@@ -162,11 +164,11 @@ def main():
     pd.DataFrame(eval_score, index=['score']).to_csv(osp.join(RESULT_PATH, 'score.csv'))
     logger.info('')
     logger.info('F1 score:')
-    logger.info(eval_score['f1_score_macro'])
-    logger.info('report:')
-    logger.info(report)
+    logger.info(eval_score['f1_score_micro'])
+    # logger.info('report:')
+    # logger.info(report)
                         
-    logger.info(testset_pred['hospital_id_patient_id'].nunique(), 'hospital_id_patient_id')
+    logger.info(f'{testset_pred["hospital_id_patient_id"].nunique()} hospital_id_patient_id')
 
 
     logger.info(testset_pred['y_pred'].value_counts())

@@ -1,8 +1,15 @@
-ckpt_path: '/VOLUME/nia_vent_asynchrony/result/pilot/2022-10-31-08-55-01/ventdys_model.pt'
+ckpt_path: '/VOLUME/nia_vent_asynchrony/result/train/2022-11-28-13-56-12/ventdys_model.pt'
 label_path: '/ext_ssd2/nia_vent/label_annotation'
 data_path: 
-- /VOLUME/nia_vent_asynchrony/data/processed_data/snu/instance_snu_1-300_1-379_120019_2022-10-27.pkl
+- /VOLUME/nia_vent_asynchrony/data/processed_data/snu/instance_snu_1-757_1-779_69121_2022-11-18.pkl # 23 pat
+- /VOLUME/nia_vent_asynchrony/data/processed_data/aju/instance_aju_2-001_2-269_92346_2022-11-09.pkl # 20 pat
+- /VOLUME/nia_vent_asynchrony/data/processed_data/aju/instance_aju_2-005_2-197_308238_2022-10-24.pkl # 38 pat
+- /VOLUME/nia_vent_asynchrony/data/processed_data/aju/instance_aju_2-402_2-521_265119_2022-10-25.pkl # 81
+- /VOLUME/nia_vent_asynchrony/data/processed_data/sev/instance_sev_4-001_4-099_674559_2022-10-17.pkl # 89 pat
+- /VOLUME/nia_vent_asynchrony/data/processed_data/sev/instance_sev_4-100_4-169_552630_2022-10-17.pkl # 70
 test_id:
-- 1-300
-result_dir: '/VOLUME/nia_vent_asynchrony/result/pilot/test'
+- 1-*
+- 2-*
+- 4-*
+result_dir: '/VOLUME/nia_vent_asynchrony/result/test'
 CUDA_VISIBLE_DEVICES: 3

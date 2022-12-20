@@ -32,13 +32,10 @@ def get_wave_instance_per_waveformfile(i, wavecsv_list):
     if wav is None:
         print(wave_i, 'return None because wav is None')
         return None
-    # if len(wav)>60*60*60:
-        # print('>',60*60*60, wave_i, len(wav)-60*60*60)
 
     try:
         wav['Intellivue/AWP_WAV'] = pd.read_csv(wave_i.replace('flow','pre').replace('-w-','-c-').replace('AWF','AWP'), parse_dates=['Time'])['Intellivue/AWP_WAV']
         n_instance = int((wav['Time'].max()-wav['Time'].min()).total_seconds()/instance_length_sec)
-        # print(i, n_instance)
 
         if n_instance==0:
             print(wave_i, 'return None because n_instance==0')
@@ -60,45 +57,43 @@ def get_wave_instance_per_waveformfile(i, wavecsv_list):
 
 def main():
     parser = argparse.ArgumentParser(description='feature data generation')
-    parser.add_argument('--config', default='config/preprocess_config.yml', help='config file path')
+    parser.add_argument('--config', default='/VOLUME/nia_vent_asynchrony/config/preprocess_config.yml', help='config file path')
     args = parser.parse_args()
     config = cutils.load_yaml(args.config)
     print(args)
     print(config)
     
     org = config['org']
-    # org = 'aju'
-
-    flow_path = config['flow_path']
+    flow_path_list = config['flow_path']
     dest_dir = config['dest_dir']
     n_threads = config['n_threads']
-
-    wavecsv_list = glob.glob(flow_path)
+    
+    wavecsv_list = []
     # flow_path = '/VOLUME/nia_vent_asynchrony/data/raw_data/snu/20220930/1-500/AWF/*.csv*'
-    # wavecsv_list.extend(glob.glob(flow_path))
+    for flow_path in flow_path_list:
+        wavecsv_list.extend(glob.glob(flow_path))
 
-    print('flow_path', flow_path)
     print('len(wavecsv_list)', len(wavecsv_list))
     print('wavecsv_list[0]', wavecsv_list[0])
 
     tmp = pd.DataFrame({'flow_path': wavecsv_list})
-    tmp = tmp['flow_path'].str.split('/').str[-1].str.replace('.csv.gz','').str.replace('.csv','').str.replace('-c-flow','').str.replace('-w-flow','').str.split('-|_').apply(pd.Series)
+    tmp = tmp['flow_path'].str.split('/').str[-1].str.replace('.csv','').str.split('-|_').apply(pd.Series)
     tmp.columns = ['hospital_id', 'patient_id', 'wav_number']
     tmp['hospital_id_patient_id'] = tmp['hospital_id'].astype(str)+'-'+tmp['patient_id'].astype(str)
     tmp['wav_number'] = tmp['wav_number'].astype(int)
-    # datadf_info = pd.concat([datadf, tmp], axis=1)
     tmp_flow = tmp.copy()
-
+    print('no of waveform files by patient')
     print(tmp['hospital_id_patient_id'].value_counts().sort_index())
 
     # check the number of files of flow and pressure
-    wavecsv_list_p = glob.glob(flow_path.replace('AWF','AWP').replace('flow','pre').replace('-w-','-c-'))
+    wavecsv_list_p = []
+    for i in wavecsv_list:
+        wavecsv_list_p.extend(glob.glob(i.replace('AWF','AWP')))
     tmp = pd.DataFrame({'flow_path': wavecsv_list_p})
-    tmp = tmp['flow_path'].str.split('/').str[-1].str.replace('-c-flow','').str.replace('-c-pre','').str.split('-|_').apply(pd.Series)
+    tmp = tmp['flow_path'].str.split('/').str[-1].str.split('-|_').apply(pd.Series)
     tmp.columns = ['hospital_id', 'patient_id', 'wav_number']
     tmp['hospital_id_patient_id'] = tmp['hospital_id'].astype(str)+'-'+tmp['patient_id'].astype(str)
     tmp['wav_number'] = tmp['wav_number'].str.replace('.csv.gz','').str.replace('.csv','').astype(int)
-    # datadf_info = pd.concat([datadf, tmp], axis=1)
     tmp_pres = tmp.copy()
     tmp_pres['type'] = 'pres'
     tmp_flow['type'] = 'flow'
@@ -106,8 +101,9 @@ def main():
     gr_stat = pd.concat([tmp_pres.groupby('hospital_id_patient_id').count(),
     tmp_flow.groupby('hospital_id_patient_id').count()
     ], axis=1)
-    gr_stat.to_csv('file_count.csv')
-    print('WARNING: unmatched', np.where(gr_stat.iloc[:,0]!=gr_stat.iloc[:,5]))
+    # gr_stat.to_csv('file_count.csv')
+    if any(gr_stat.iloc[:,0]!=gr_stat.iloc[:,5]):
+        print('WARNING: unmatched', np.where(gr_stat.iloc[:,0]!=gr_stat.iloc[:,5]))
 
 
     # divide data into 60 sec 
@@ -130,7 +126,6 @@ def main():
             data.append(i)
     datadf = pd.concat(data)
     print('elapsed time (sec):', time.time()-since)
-    # 2118 csv file, 50 threads, elapsed  mins
 
     # write results
     nowDate = cutils.get_today_string(False)
@@ -138,7 +133,7 @@ def main():
     # print(dest_path)
     # datadf.to_pickle(dest_path)
 
-    tmp = datadf['flow_path'].str.split('/').str[-1].str.replace('-c-flow','').str.split('-|_').apply(pd.Series)
+    tmp = datadf['flow_path'].str.split('/').str[-1].str.split('-|_').apply(pd.Series)
     tmp.columns = ['hospital_id', 'patient_id', 'wav_number']
     tmp['hospital_id_patient_id'] = tmp['hospital_id']+'-'+tmp['patient_id']
     tmp['wav_number'] = tmp['wav_number'].str.replace('.csv.gz','').str.replace('.csv','').astype(int)
