@@ -5,34 +5,44 @@ data_path:
 - /VOLUME/nia_vent_asynchrony/data/processed_data/snu/instance_snu_1-200_1-299_108046_2022-10-27.pkl
 - /VOLUME/nia_vent_asynchrony/data/processed_data/snu/instance_snu_1-300_1-379_120019_2022-10-27.pkl
 - /VOLUME/nia_vent_asynchrony/data/processed_data/snu/instance_snu_1-380_1-399_121969_2022-10-04.pkl
-- /VOLUME/nia_vent_asynchrony/data/processed_data/snu/instance_snu_1-450_1-469_162654_2022-10-04.pkl
-- /VOLUME/nia_vent_asynchrony/data/processed_data/snu/instance_snu_1-470_1-499_206407_2022-11-28.pkl
+- /VOLUME/nia_vent_asynchrony/data/processed_data/snu/instance_snu_1-450_1-469_162654_2022-10-04.pkl # 20 pat
+- /VOLUME/nia_vent_asynchrony/data/processed_data/snu/instance_snu_1-470_1-499_206407_2022-11-28.pkl # 30 pat
 - /VOLUME/nia_vent_asynchrony/data/processed_data/snu/instance_snu_1-500_1-539_128828_2022-10-05.pkl
 - /VOLUME/nia_vent_asynchrony/data/processed_data/snu/instance_snu_1-540_1-579_96166_2022-10-05.pkl
 - /VOLUME/nia_vent_asynchrony/data/processed_data/snu/instance_snu_1-580_1-599_18849_2022-11-28.pkl
 - /VOLUME/nia_vent_asynchrony/data/processed_data/snu/instance_snu_1-600_1-699_153280_2022-11-08.pkl
-- /VOLUME/nia_vent_asynchrony/data/processed_data/snu/instance_snu_1-700_1-756_387892_2022-10-05.pkl # 23 pat
-# - /VOLUME/nia_vent_asynchrony/data/processed_data/aju/instance_aju_2-005_2-197_308238_2022-10-24.pkl # 38 pat
+- /VOLUME/nia_vent_asynchrony/data/processed_data/aju/instance_aju_2-005_2-197_308238_2022-10-24.pkl # 38 pat
 - /VOLUME/nia_vent_asynchrony/data/processed_data/aju/instance_aju_2-202_2-299_457311_2022-10-25.pkl # 38 pat
 - /VOLUME/nia_vent_asynchrony/data/processed_data/aju/instance_aju_2-304_2-399_474923_2022-10-25.pkl  # 31 pat
 - /VOLUME/nia_vent_asynchrony/data/processed_data/aju/instance_aju_2-300_2-595_849436_2022-10-05.pkl # 117 pat
 - /VOLUME/nia_vent_asynchrony/data/processed_data/aju/instance_aju_2-600_2-952_84214_2022-10-05.pkl # 15 pat
-# - /VOLUME/nia_vent_asynchrony/data/processed_data/sev/instance_sev_4-001_4-099_674559_2022-10-17.pkl # 89 pat
 - /VOLUME/nia_vent_asynchrony/data/processed_data/sev/instance_sev_4-170_4-179_75554_2022-10-17.pkl # 10 pat
-- /VOLUME/nia_vent_asynchrony/data/processed_data/sev/instance_sev_4-180_4-199_166656_2022-10-18.pkl # 20 pat
 - /VOLUME/nia_vent_asynchrony/data/processed_data/sev/instance_sev_4-200_4-292_542015_2022-10-18.pkl # 88 pat
+- /VOLUME/nia_vent_asynchrony/data/processed_data/sev/instance_sev_4-001_4-099_674559_2022-10-17.pkl # 89 pat
+- /VOLUME/nia_vent_asynchrony/data/processed_data/sev/instance_sev_4-100_4-169_552630_2022-10-17.pkl # 70
+sample_num:
+  train: 
+    0 : 579067
+    1 : 115813
+    2 : 4343
+  validation:
+    0 : 72400
+    1 : 14480
+    2 : 543
 train_id:
 - 1-[0-3]*
-- 1-[5-7]*
+- 1-4[7-9]*
+- 1-[5-6]*
 - 2-[0-5]*
 - 4-1[0-7]*
 - 4-2*
 validation_id:
-- 1-4*
-- 2-[6-9]*
-- 4-0*
-- 4-1[8-9]*
+- 1-4[5-6]* # 20
+- 2-[6-9]* # 15
+- 4-0* # 89
 result_dir: '/VOLUME/nia_vent_asynchrony/result/train'
 CUDA_VISIBLE_DEVICES: 1
 n_epochs: 50
 learning_rate: 0.001
+write_feature: False
+load_feature: None # /VOLUME/nia_vent_asynchrony/result/train/2022-12-07-05-49-33/feature_df.pkl

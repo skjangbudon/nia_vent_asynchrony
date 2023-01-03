@@ -36,6 +36,7 @@ def main():
     config = cutils.load_yaml(args.config)
     ckpt_path = config['ckpt_path']
     data_path = config['data_path']
+    sample_num = config['sample_num']
     
     nowDate = cutils.get_today_string()
     RESULT_PATH = osp.join(config['result_dir'], nowDate)
@@ -54,7 +55,7 @@ def main():
     logger.info(f'{os.path.basename(__file__)} --config {args.config}')
     logger.info('')
     
-    os.environ["CUDA_VISIBLE_DEVICES"]= str(config['CUDA_VISIBLE_DEVICES'])
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(config['CUDA_VISIBLE_DEVICES'])
     logger.info('Current cuda device:'+str(torch.cuda.current_device()))
     logger.info('Count of using GPUs:'+str(torch.cuda.device_count()))
 
@@ -94,6 +95,11 @@ def main():
         feature_df = annotate_one_instance_file(data_path, ann_df)
         feature_df_list.append(feature_df)
     feature_df = pd.concat(feature_df_list)
+    
+    if sample_num is not None:    
+        feature_df = pd.concat([feature_df[feature_df['label']==0].sample(n=sample_num[0]),
+                                feature_df[feature_df['label']==1].sample(n=sample_num[1]),
+                                feature_df[feature_df['label']==2].sample(n=sample_num[2])])
     
     feature_df['split']='test'
     

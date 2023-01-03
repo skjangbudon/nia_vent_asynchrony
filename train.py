@@ -25,6 +25,7 @@ def main():
     parser.add_argument('--config', default='/VOLUME/nia_vent_asynchrony/config/train_config.yml', help='config file path')
     args = parser.parse_args()
     config = cutils.load_yaml(args.config)
+    sample_num = config['sample_num']
 
     nowDate = cutils.get_today_string()
     if os.path.exists(config['load_feature']):
@@ -76,7 +77,6 @@ def main():
             feature_df_list.append(feature_df)
         feature_df = pd.concat(feature_df_list)
 
-
         # train, validation 나누기
         train_idx = [feature_df['hospital_id_patient_id'].str.match(pat.replace('*','[0-9]+')) for pat in config['train_id']]
         train_idx = pd.concat(train_idx, axis=1).sum(axis=1)>0
@@ -87,6 +87,16 @@ def main():
         feature_df['split'] = ''
         feature_df.loc[train_idx,'split'] = 'train'
         feature_df.loc[validation_idx,'split'] = 'valid'
+
+        if sample_num is not None:    
+            feature_df = pd.concat([feature_df.query('split=="train"').query('label==0').sample(n=sample_num['train'][0]),
+                                    feature_df.query('split=="train"').query('label==1').sample(n=sample_num['train'][1]),
+                                    feature_df.query('split=="train"').query('label==2').sample(n=sample_num['train'][2]),
+                                    feature_df.query('split=="valid"').query('label==0').sample(n=sample_num['validation'][0]),
+                                    feature_df.query('split=="valid"').query('label==1').sample(n=sample_num['validation'][1]),
+                                    feature_df.query('split=="valid"').query('label==2').sample(n=sample_num['validation'][2])
+                                    ])
+
         logger.info(feature_df['split'].value_counts())
         logger.info('total'+ str(len(feature_df)))
         logger.info('no. hospital_id_patient_id by set')
@@ -112,7 +122,7 @@ def main():
         
         if config['write_feature']:    
             feature_df.to_pickle(osp.join(RESULT_PATH, 'feature_df.pkl'))
-    feature_df = feature_df.sample(100000)
+    
     train_dataloader, val_dataloader, _ = preprocess_data(feature_df, set_train_weightedsampler=True, scale=True, target=None)
     # 89934 instance, 20 threads, elapsed 1 min
     
