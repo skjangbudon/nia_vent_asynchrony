@@ -1,0 +1,71 @@
+실행 방법
+참고: https://github.com/skjangbudon/nia_vent_asynchrony.git
+
+1. AI hub에서 도커 환경파일(vent_asynchrony.tar)과 라벨링데이터, 파형 데이터 다운로드
+
+
+2. 도커 컨테이너 세팅
+# create docker image using .tar file 
+$ docker load -i vent_asynchrony.tar
+
+# run bash command in a new container
+# (path)에 데이터가 있는 사용자 로컬 경로를 입력
+$ docker run -dit -v (path):/(container path) --name vent_async_eval vent_async:latest bash
+# for example,
+$ docker run -dit -v /data/project/nia_vent:/VOLUME -v /ext_ssd:/ext_ssd --name vent_async_eval --shm-size 500G --gpus all vent_async:latest bash
+
+# execute a running container
+$ docker exec -it vent_async_eval bash
+
+도커 컨테이너 내부 초기 경로(Working directory)는 /evaluation/nia_vent_asynchrony 로 세팅되어있으며,
+훈련,테스트 소스코드와 훈련된 모델이 저장되어있음
+
+
+3. config 파일 수정을 위해 vim 편집기 설치
+# 설치 위한 사용자 권한 수정 및 public key 입력 
+chmod 777 /tmp
+apt-key adv --keyserver keyserver.ubuntu.com --recv-keys A4B469963BF863CC # 복사된 키 붙여넣기
+apt-get update # 업데이트
+apt-get install -y vim # vim 패키지 설치
+
+
+4. Config 폴더의 내용을 알맞게 수정 (훈련에 사용할 환자 번호, 데이터 경로 등)
+4-1. 전처리 설정
+초기 전처리 설정 파일(config/preprocess_config.yml)은 다음과 같이 되어있음
+"""
+org: 'snu' # 'snu', 'aju' # this oranization name is used for filename that comes from preprocessing
+flow_path:
+ - '/ext_ssd/nia_vent/snu/20220930/1-4[7-9]*/AWF/*.csv'
+dest_dir: '/VOLUME/nia_vent_asynchrony/data/processed_data'
+n_threads: 50
+"""
+* flow_path :
+flow_path 항목에 전처리하고 싶은 범위의 파일들을 작성 (정규표현식 허용, 여러개 경로 입력 가능)
+FLOW파일을 기준으로 입력하며, Pressure파형은 전처리 과정에서 자동으로 flow_path 경로에서 AWF를 AWP로 바꿔 인식하므로 폴더 구조를 반드시 지켜 저장해야함
+위의 설정은 사용자 /ext_ssd/nia_vent/snu/20220930/ 경로에 파형 파일이 있는 경우를 예시로 작성되어 있음
+예를 들어 /ext_ssd/nia_vent/snu/20220930/ 경로에 1-471같은 환자ID별 폴더 하위 AWF, AWP 폴더가 있고, 이곳 각각에 pressure와 flow 파형 파일이 저장되어 있음
+사용자 환경에 맞게 AI hub에서 다운받은 파형 파일이 위치한 경로로 변경 
+* org, dest_dir :
+전처리 스크립트를 실행하면 입력된 dest_dir 경로 하위에 입력된 org 항목명으로 폴더가 생성되며, 그 폴더에 전처리 완료된 파일이 저장될 것임
+
+4-2. 훈련 설정
+* label_path: 라벨링 데이터 위치 경로 입력 (AIhub에서 사용자가 다운로드)
+* data_path: 전처리 완료된 파일 경로 입력
+* sample_num: 과도한 data imbalance 방지를 위해 train, validation set에서 라벨별 샘플링 개수를 지정. 샘플링을 원하지 않으면 sample_num을 주석처리하거나 제거함
+* train_id, validation_id: train과 validation에 사용할 환자 ID를 입력
+* result_dir: 원하는 결과 저장 경로. (result_dir)/(datetime e.g. 2022-11-23-04-25-17) 폴더가 생성되며 내부에 로그 파일, label_freq_trainval.csv, feature_df.pkl가 저장될 예정
+* write_feature: True면 data_path에서 불러온 여러 데이터가 합쳐지고 라벨과 매핑된 데이터가 feature_df.pkl 이름으로 저장됨. 같은 데이터로 다른 hyperparameter로 훈련할때 시간 단축할 수 있음
+* load_feature: write_feature flag를 통해 이미 저장된 feature_df.pkl 파일 경로. 필요 없으면 None 또는 파일 존재하지 않는 경로 입력
+
+4-3. 테스트 설정
+* ckpt_path: 훈련 완료된 모델 파일 경로. 사용자가 훈련한 모델을 적거나 기존에 훈련된 파일을 사용할 수 있음(/evaluation/nia_vent_asynchrony/result/train/2023-01-02-06-48-53/ventdys_model.pt)
+
+5. 전처리 스크립트 실행
+python preprocess.py --config config/preprocess_config.yml
+
+6. 훈련 스크립트 실행
+python train.py --config config/train_config.yml
+
+7. 테스트 스크립트 실행
+python test.py --config config/test_config.yml
+
