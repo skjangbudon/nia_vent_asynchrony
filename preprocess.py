@@ -149,10 +149,10 @@ def main():
     print(len(datadf_info))
 
     del datadf_info_na['data']
-    os.makedirs(dest_dir, exist_ok=True)
     nowDate = cutils.get_today_string(False)
     dest_path = osp.join(dest_dir, org, f'instance_{org}_{datadf_info_na["hospital_id_patient_id"].min()}_{datadf_info_na["hospital_id_patient_id"].max()}_{len(datadf_info)}_nan_{nowDate}.csv')
     print(dest_path)
+    os.makedirs(osp.dirname(dest_path), exist_ok=True)
     datadf_info_na.to_csv(dest_path, index=False)
 
     nowDate = cutils.get_today_string(False)

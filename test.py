@@ -36,7 +36,7 @@ def main():
     config = cutils.load_yaml(args.config)
     ckpt_path = config['ckpt_path']
     data_path = config['data_path']
-    sample_num = config['sample_num']
+    sample_num = config['sample_num'] if 'sample_num' in config else None
     
     nowDate = cutils.get_today_string()
     RESULT_PATH = osp.join(config['result_dir'], nowDate)

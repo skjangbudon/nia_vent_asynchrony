@@ -25,7 +25,7 @@ def main():
     parser.add_argument('--config', default='/VOLUME/nia_vent_asynchrony/config/train_config.yml', help='config file path')
     args = parser.parse_args()
     config = cutils.load_yaml(args.config)
-    sample_num = config['sample_num']
+    sample_num = config['sample_num'] if 'sample_num' in config else None
 
     nowDate = cutils.get_today_string()
     if os.path.exists(config['load_feature']):
@@ -37,7 +37,10 @@ def main():
     logger = cutils.set_logger('train', path=RESULT_PATH)
     logger.info(config)
     logger.info('RESULT_PATH:'+ RESULT_PATH)
-
+    
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(config['CUDA_VISIBLE_DEVICES'])
+    logger.info('Current cuda device:'+str(torch.cuda.current_device()))
+    
     if os.path.exists(config['load_feature']):
         feature_df = pd.read_pickle(config['load_feature'])
     else:
@@ -144,7 +147,7 @@ def main():
 
     ventdys_model = AsynchModel(input_dim=2, padding_mode='replicate', num_class=feature_df['label'].nunique()).to(device)
 
-    logger.info(summary(ventdys_model, input_size=(2, 3600), device='cuda'))
+    logger.info(summary(ventdys_model, input_size=(2, 3600), device=str(device)))
 
     n_epochs = config['n_epochs']
     learning_rate = config['learning_rate']
